@@ -1,0 +1,14 @@
+5-31-2018  The verilog source code for this project is for the Simplified SD Card Specification.  Only the necessary codes are
+implemented to make the card funtional for the on going project at the time.  
+
+Basically, the card needs to store 1024 words every 0.5 second.  Each word is 36 bits.  Every 0.5 second, the IO fpga will fetch 256 words
+from the UI, Control, Safety and itself to store in the sd card.  The information is the memory map registers of these fpgas.  The data
+will be used for troubleshooting.  To make 1024 words to fit into the sd card sector architecture, we will need to send 16 blocks every
+0.5 second.  For the sd card, each block is 512 bytes.
+
+At this time, only 15 blocks are sucessfully sent.  I think the last block does not have the CRC included, that is why the sd card does not
+write it to memory.  I will need a chipscope license to troubleshoot this last issue.
+
+This repository includes the source codes for the sd card and other codes to make it work for the board it was used on.  You can download
+the Simplified Specification at https://www.sdcard.org/downloads/pls/.  This code uses both the physical layer and host controller 
+simplified specification.
