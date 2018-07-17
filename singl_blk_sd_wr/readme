@@ -1,0 +1,2 @@
+The files here are for writing only one block to the sd card.  One block here contains 512 bytes of data, 
+which is one sector of the sd card.  All the codes here work for the PAK board.
