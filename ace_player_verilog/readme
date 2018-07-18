@@ -1,0 +1,3 @@
+This project uses the Xilinx Ace Player to program the bit file into the flash prom using the .ace format.  The ace player vhdl code
+was converted to verilog and all the necessary glue logic was written to perform the transfer.  The ace file was successfully 
+implemented using the 1 MHz serial uart transfer.
