@@ -52,16 +52,6 @@ module sdc_snd_dat_1_bit(
 	reg				wr_busy_flg;		
    //reg            new_dat_strb;           // new data word strobe
    reg            look_for_D0_rise;       // start looking for D0 rise after sending to sdc
-   reg            fin_all_dat_strb_z1;    // delay
-   reg            fin_all_dat_strb_z2;    // delay
-   reg            fin_all_dat_strb_z3;    // delay
-   reg            fin_all_dat_strb_z4;    // delay
-   reg            fin_all_dat_strb_z5;    // delay
-   reg            fin_all_dat_strb_z6;    // delay
-   reg            fin_all_dat_strb_z7;    // delay
-   reg            fin_all_dat_strb_z8;    // delay
-   reg            fin_all_dat_strb_z9;    // delay
-   reg            fin_all_dat_strb_z10;   // delay
 	
 	// Wires.                                                                    
 	wire				fin_calc_crc_strb;
@@ -90,16 +80,7 @@ module sdc_snd_dat_1_bit(
 		oe_reg_z1					<= 1'b0; 
 		stp_strb_for_dat			<= 1'b0;
 		wr_busy_flg					<= 1'b0;
-		fin_all_dat_strb_z1		<= 1'b0;
-		fin_all_dat_strb_z2		<= 1'b0;
-		fin_all_dat_strb_z3		<= 1'b0;
-		fin_all_dat_strb_z4		<= 1'b0;
-		fin_all_dat_strb_z5		<= 1'b0;
-		fin_all_dat_strb_z6		<= 1'b0;
-		fin_all_dat_strb_z7		<= 1'b0;
-		fin_all_dat_strb_z8		<= 1'b0;
-		fin_all_dat_strb_z9		<= 1'b0;
-		fin_all_dat_strb_z10		<= 1'b0;
+		//new_dat_strb			   <= 1'b0;
 	end
 	
 	// Assign output.
@@ -118,16 +99,6 @@ module sdc_snd_dat_1_bit(
 			strt_snd_data_strb_z4	<= 1'b0;
 			D0_in_z1						<= 1'b1;
          oe_reg_z1					<= 1'b0;
-         fin_all_dat_strb_z1		<= 1'b0;
-         fin_all_dat_strb_z2		<= 1'b0;
-         fin_all_dat_strb_z3		<= 1'b0;
-         fin_all_dat_strb_z4		<= 1'b0;
-         fin_all_dat_strb_z5		<= 1'b0;
-         fin_all_dat_strb_z6		<= 1'b0;
-         fin_all_dat_strb_z7		<= 1'b0;
-         fin_all_dat_strb_z8		<= 1'b0;
-         fin_all_dat_strb_z9		<= 1'b0;
-         fin_all_dat_strb_z10		<= 1'b0;
 		end
 		else begin 	 								  
 			strt_snd_data_strb_z1	<= strt_snd_data_strb;
@@ -136,16 +107,6 @@ module sdc_snd_dat_1_bit(
 			strt_snd_data_strb_z4	<= strt_snd_data_strb_z3;
 			D0_in_z1						<= D0_in;
          oe_reg_z1					<= oe_reg;
-         fin_all_dat_strb_z1		<= fin_all_dat_strb;
-         fin_all_dat_strb_z2		<= fin_all_dat_strb_z1;
-         fin_all_dat_strb_z3		<= fin_all_dat_strb_z2;
-         fin_all_dat_strb_z4		<= fin_all_dat_strb_z3;
-         fin_all_dat_strb_z5		<= fin_all_dat_strb_z4;
-         fin_all_dat_strb_z6		<= fin_all_dat_strb_z5;
-         fin_all_dat_strb_z7		<= fin_all_dat_strb_z6;
-         fin_all_dat_strb_z8		<= fin_all_dat_strb_z7;
-         fin_all_dat_strb_z9		<= fin_all_dat_strb_z8;
-         fin_all_dat_strb_z10		<= fin_all_dat_strb_z9;
 		end
 	end 	  	
 	
@@ -226,6 +187,7 @@ module sdc_snd_dat_1_bit(
    // For PUC, one word is 64 bits.
    // Basically, we need to strobe for the next word before we finsihed
    // sending out the present word.  We do this for 64 times, ie 64 words.
+   // This counts every bit of each word.
 	//-------------------------------------------------------------------------
 	defparam newDatSetCntr.dw 	= 8;
 	defparam newDatSetCntr.max	= 8'h3E;	// 62.
@@ -235,12 +197,22 @@ module sdc_snd_dat_1_bit(
 		.reset(reset),			
 		.enable(1'b1), 	
 		// Strobe for new set of data until we have strobed 64 times.
-		//.start_strb((strt_snd_data_strb_z2 || nxt_dat_strb) && (!stp_strb_for_dat) /*&& (dataWrdCnt > 8'h00 )*/),
-      // Only strobe when dataWrdcnt is between 1 and 64.
-		.start_strb((strt_snd_data_strb_z2 || nxt_dat_strb) && (/*(dataWrdCnt >= 8'h01) ||*/ (dataWrdCnt < 8'h40))),  	 	
+		.start_strb((strt_snd_data_strb_z2 || nxt_dat_strb) && (!stp_strb_for_dat) /*&& (dataWrdCnt > 8'h00 )*/),  	 	
 		.cntr(), 
 		.strb(nxt_dat_strb) 	// Next data set.
-	); 			  
+	); 							                                          
+										  
+	// Strobe for next data word
+   //
+//	always @(posedge sd_clk) 
+//	begin
+//      if (reset) 							
+//         new_dat_strb	<= 1'b0;	
+//      else if (nxt_dat_strb && (dataWrdCnt < 8'h41)) 							
+//         new_dat_strb	<= 1'b1;		
+//		else		
+//         new_dat_strb	<= 1'b0;
+//	end		  
 	
 	//-------------------------------------------------------------------------
 	// We need to count how many words of data already used.
@@ -265,12 +237,12 @@ module sdc_snd_dat_1_bit(
 	begin
 		if (reset) 
 			stp_strb_for_dat <= 1'b0;
-		else if (fin_all_dat_strb_z10) 
+		else if (fin_all_dat_strb) 
 			stp_strb_for_dat <= 1'b1;	
 		else if (strt_snd_data_strb) 
 			stp_strb_for_dat <= 1'b0;	// reset
-		//else 
-			//stp_strb_for_dat <= stp_strb_for_dat;
+		else 
+			stp_strb_for_dat <= stp_strb_for_dat;
 	end
 	
 	// We know DAT0 is busy if it is held low after 
