@@ -1,3 +1,3 @@
-This is the solenoid driver that control the dialysis diaphragm valves.  The driver has three positions: in, out and home.  The ADC driver
+This is the solenoid driver that controls the dialysis diaphragm valves.  The driver has three positions: in, out and home.  The ADC driver
 indicates where to stop the solenoids.  The driver uses the raw adc counts.  No conversion to number is used.  Experiments show where
 these positions should be and converted to raw counts.
