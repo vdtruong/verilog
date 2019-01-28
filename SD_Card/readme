@@ -18,6 +18,6 @@ extra strobe.  The fifo controller address was not incremented but the BRAM was 
 Temporarily block the last BRAM strobe but will need to find out why this happened.  In any case, the 16th CRC is now being written to the
 SD card and all 16 blocks are written to the card now.  
 
-Also, delay the write between each block transfer to 60 ms and this reliably write 16 blocks to the SD card everytime.  Will need to 
+Also, delay the write between each block transfer to 60 ms and this reliably writes 16 blocks to the SD card everytime.  Will need to 
 experiment a shorter delay.  The 20 ms delay before did not reliably write all blocks to the card.  Perhaps there needs to be a smarter
 way to delay the writes because the constant delays will cost a lot of time.
