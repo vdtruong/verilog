@@ -17,15 +17,26 @@
 // Revision: 
 // Revision 0.01 - File Created
 // Additional Comments: 
+//                   1/25/19  Got 16 blocks to write successfully.  Before, the
+//                   last CRC was overwritten in the BRAM.  This happens
+//                   even though the fifo controller did not increment
+//                   to another address.  This is actually why the CRC
+//                   was overwritten.  If the fifo controller had 
+//                   increment to another address, the CRC would have
+//                   not been overwritten.  So we need to investigate
+//                   why we had an extra wr_b_strb to trigger the extra
+//                   write to the BRAM.
 //                       
 //								
 ///////////////////////////////////////////////////////////////////////////////
 module sd_host_bus_driver
-#(parameter BRAM_SYSMEM_FILE 	= "C:/FPGA_Design/sd_card_controller/src/BRAM_1057_x_64.txt",
-  parameter BRAM_DES_FILE 	   = "C:/FPGA_Design/sd_card_controller/src/BRAM_32_x_64.txt",
-  parameter SM_MEM_SIZE       = 128,
-  parameter SM_ADDR_WD        = 12,
-  parameter SM_DATA_WD        = 64)
+#( //parameter BRAM_SYSMEM_FILE 	= "C:/FPGA_Design/sd_card_controller/src/BRAM_1057_x_64.txt",
+   //parameter BRAM_SYSMEM_FILE 	= "C:/FPGA_Design/sd_card_controller/src/BRAM_1040_x_64.txt",
+   parameter BRAM_SYSMEM_FILE 	= "C:/FPGA_Design/sd_card_controller/src/BRAM_2048_x_64.txt",
+   parameter BRAM_DES_FILE 	   = "C:/FPGA_Design/sd_card_controller/src/BRAM_32_x_64.txt",
+   parameter SM_MEM_SIZE         = 128,
+   parameter SM_ADDR_WD          = 12,
+   parameter SM_DATA_WD          = 64)
  (
 	input 					clk,
 	input						reset,
@@ -1311,8 +1322,10 @@ module sd_host_bus_driver
 	//			datain	<= 64'h0000000002000021;   // First 15 descriptor tables. 
    //      else if (descrptrCnt == 5'h10)
 	//			datain	<= 64'h0000000002000023;   // Last descriptor table.
-			else				  
+			else if (wr_b_strb)				  
 				datain	<= fifo_data;
+			//else				  
+				//datain	<= fifo_data;
 		end
    	
 	// This is the System Memory RAM.
@@ -1331,18 +1344,24 @@ module sd_host_bus_driver
 	// When the data comes over from the PUC, we store the data
 	// in the fifo and also calculate the CRC for the whole word
    // as it comes in one at a time.
-  	defparam BlockRAM_DPM_1057_x_64_i.BRAM_DPM_INITIAL_FILE = BRAM_SYSMEM_FILE;  
-  	BlockRAM_DPM_1057_x_64  BlockRAM_DPM_1057_x_64_i
+  	//defparam BlockRAM_DPM_1057_x_64_i.BRAM_DPM_INITIAL_FILE = BRAM_SYSMEM_FILE;  
+  	//BlockRAM_DPM_1057_x_64  BlockRAM_DPM_1057_x_64_i
+  	//defparam BlockRAM_DPM_1040_x_64_i.BRAM_DPM_INITIAL_FILE = BRAM_SYSMEM_FILE;  
+  	//BlockRAM_DPM_1040_x_64  BlockRAM_DPM_1040_x_64_i
+  	defparam BlockRAM_DPM_2048_x_64_i.BRAM_DPM_INITIAL_FILE = BRAM_SYSMEM_FILE;  
+  	BlockRAM_DPM_2048_x_64  BlockRAM_DPM_2048_x_64_i
   	(	
-		.clk(clk), 										//	input 					            
-      .addr_a(sm_rd_addr),			            // input                            
-      .datain_a(),    								// input                           
-      .wr_a(),            							// input                           
-      .addr_b(sm_wr_addr),    		         // input                            
-      .wr_b(wr_b_strb_z2 || str_crc_strb_z2),//	input                            
-      .datain_b(datain), 							// input                            
-      .dataout_a(sm_rd_data),						// output                           
-      .dataout_b()									// output                           
+		.clk(clk), 										                     //	input 					            
+      .addr_a(sm_rd_addr),			                                 // input                            
+      .datain_a(),    								                     // input                           
+      .wr_a(),            							                     // input                           
+      .addr_b(sm_wr_addr),    		                              // input           
+      // Only strobe when we are still updating the block ram.
+      // After we have 16 blocks, stop.
+      .wr_b(!stop_recv_pkt && (wr_b_strb_z2 || str_crc_strb_z2)), //	input                            
+      .datain_b(datain), 							                     // input                            
+      .dataout_a(sm_rd_data),						                     // output                           
+      .dataout_b()									                     // output                           
   	);   
 	
   	defparam FifoCntrllr.WIDTH	= SM_ADDR_WD; 

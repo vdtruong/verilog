@@ -214,10 +214,12 @@ module adma2_fsm(
 	// After we send out one block of data, wait for 20 ms before checking
 	// to see if card is ready.
 	//-------------------------------------------------------------------------
-	defparam waitCntr.dw 	= 20;
+	//defparam waitCntr.dw 	= 20; // 20 bits
+	defparam waitCntr.dw 	= 24; // 24 bits
 	// Change this to reflect the number of counts you want.
 	// Count up to this number, starting at zero.
-	defparam waitCntr.max	= 20'hF4240;	
+	//defparam waitCntr.max	= 20'hF4240; // 20 ms = 1M cnts - use this for simulation.	
+	defparam waitCntr.max	= 24'h2DC6C0; // 60 ms = 3M cnts - use this for integration (real thing).
 	//-------------------------------------------------------------------------
 	CounterSeq waitCntr(
 		.clk(clk), 		                  // Clock input 50 MHz 
