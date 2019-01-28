@@ -12,3 +12,12 @@ write it to memory.  I will need a chipscope license to troubleshoot this last i
 This repository includes the source codes for the sd card and other codes to make it work for the board it was used on.  You can download
 the Simplified Specification at https://www.sdcard.org/downloads/pls/.  This code uses both the physical layer and host controller 
 simplified specification.
+
+1-28-2019  Figured out why the 16th block was not being written to the SD card.  The block ram last CRC data was overwritten by one
+extra strobe.  The fifo controller address was not incremented but the BRAM was written again, therefore, it overwrote the last CRC.  
+Temporarily block the last BRAM strobe but will need to find out why this happened.  In any case, the 16th CRC is now being written to the
+SD card and all 16 blocks are written to the card now.  
+
+Also, delay the write between each block transfer to 60 ms and this reliably writes 16 blocks to the SD card everytime.  Will need to 
+experiment a shorter delay.  The 20 ms delay before did not reliably write all blocks to the card.  Perhaps there needs to be a smarter
+way to delay the writes because the constant delays will cost a lot of time.
