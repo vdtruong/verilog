@@ -26,40 +26,39 @@ module sd_host_controller(
 	input 					card_removed_strb,
 	
 	// For communication with the map registers.
-	input 		[11:0]	rd_reg_index, 	      // which reg to read
-	output reg	[127:0]	rd_reg_output,	      // export reg data	
+	input 		[11:0]	rd_reg_index, 	  		// which reg to read
+	output reg	[127:0]	rd_reg_output,	  		// export reg data	
 	input						wr_reg_strb,	      // strobe to write data
 	input 		[11:0]	wr_reg_index,	      // which reg to write
 	input 		[31:0]	wr_reg_input,	      // data to write
 	input 		[2:0]		reg_attr,
-	input 		[2:0]		kind_of_resp, 	      // based on command index
+	input 		[2:0]		kind_of_resp, 	    	// based on command index
 																									 
-   input 		[35:0] 	data,	  															 
+  	input 		[35:0] 	data,	  															 
 	
 	// For adma state machine.
 	input						strt_adma_strb,	   // Start Fifo transfer to sd card.	   	
 	input			[15:0]	pkt_crc,					// CRC for 512 bytes from PUC.   
-   output               des_fifo_rd_strb,    // strobe for the descriptor item   
-   input       [63:0]   des_rd_data,         // descriptor item   
-   input                fin_cmnd_strb,       // finished sending out cmd13, response is ready   input  
+  	output             	des_fifo_rd_strb,		// strobe for the descriptor item   
+  	input       [63:0] 	des_rd_data,        	// descriptor item   
+  	input              	fin_cmnd_strb,      	// finished sending out cmd13, response is ready   input  
 	
 	// For Fifo data.									
 	// Send signal to puc to start filling up fifo.
-	//output					strt_fifo_strb,
-   // This signal fetches the first data from the data bram.
-   output reg           strt_snd_data_strb,  // start to send data to sd card.
-   // The signal fetches the following data from the bram
-   // until we are finished with one block of data.  One block
-   // is 64 words of 64 bits each.
-   output 					new_dat_strb,			// Ready for next word of data to sd card.
+  	// This signal fetches the first data from the data bram.
+  	output reg          	strt_snd_data_strb, // start to send data to sd card.
+  	// The signal fetches the following data from the bram
+  	// until we are finished with one block of data.  One block
+  	// is 64 words of 64 bits each.
+  	output 					new_dat_strb,			// Ready for next word of data to sd card.
 	input 		[63:0]	sm_rd_data,				// from the system memory RAM	 
 	input						fifo_rdy_strb,			// fifo is ready to be used
 	
 	output					end_bit_det_strb,		// finished sending out command
 	output					r1_crc7_good_out,
-   output               snd_auto_cmd12_strb, // send the auto cmd12 to end multiple blocks transfer
-   //output               issue_abort_cmd,     // indicate an abort command is being sent
-   output               snd_cmd13_strb,      // send cmd13 to poll for card ready    
+  	output              	snd_auto_cmd12_strb,	// send the auto cmd12 to end multiple blocks transfer
+  
+  	output              	snd_cmd13_strb,     	// send cmd13 to poll for card ready    
 	
 	input						D0_in, 					// only D0 has a busy signal
 	output					D0_out,
@@ -72,7 +71,7 @@ module sd_host_controller(
 	output     				SDC_CLK,
 	input						cmd_in,
 	output					cmd_out
-   );
+);
 
 /*-----------------------------------------------------------------------
 	SD Specifications
@@ -82,72 +81,73 @@ module sd_host_controller(
 	Version 3.00
 	February 25, 2011
 	
-                          Table 2-1 : SD Host Controller Register Map
-								  The SD Host Controller or the Host Bus Driver
-								  can both write and read to these registers.  It
-								  depends on the situation.
+	Table 2-1 : SD Host Controller Register Map
+	The SD Host Controller or the Host Bus Driver
+	can both write and read to these registers.  It
+	depends on the situation.
+	
 	Offset 	
-	000h SDMA System Address (Low)
-		  Argument 2 (Low)
-	002h SDMA System Address (High)
-		  Argument 2 (High)
-	004h Block Size
-	006h Block Count
-	008h Argument 1 (Low)
-	00Ah Argument 1 (High)
-	00Ch Transfer Mode
-	00Eh Command
-	010h Response0
-	012h Response1
-	014h Response2
-	016h Response3
-	018h Response4
-	01Ah Response5
-	01Ch Response6
-	01Eh Response7
-	020h Buffer Data Port0
-	022h Buffer Data Port1
-	024h Present State
-	026h Present State
-	028h Power Control Host Control 1
-	02Ah Wakeup Control Block Gap Control
-	02Ch Clock Control
-	02Eh Software Reset Timeout Control
-	030h Normal Interrupt Status
-	032h Error Interrupt Status
-	034h Normal Interrupt Status Enable
-	036h Error Interrupt Status Enable
-	038h Normal Interrupt Signal Enable
-	03Ah Error Interrupt Signal Enable
-	03Ch Auto CMD Error Status
-	03Eh Host Control 2
-	040h Capabilities
-	042h Capabilities
-	044h Capabilities
-	046h Capabilities
-	048h Maximum Current Capabilities
-	04Ah Maximum Current Capabilities
-	04Ch Maximum Current Capabilities (Reserved)
-	04Eh Maximum Current Capabilities (Reserved)
-	050h Force Event for Auto CMD Error Status
-	052h Force Event for Error Interrupt Status
-	054h --- ADMA Error Status
-	058h ADMA System Address [15:00]
-	05Ah ADMA System Address [31:16]
-	05Ch ADMA System Address [47:32]
-	05Eh ADMA System Address [63:48]
-	060h Preset Value
-	062h Preset Value
-	064h Preset Value
-	066h Preset Value
-	068h Preset Value
-	06Ah Preset Value
-	06Ch Preset Value
-	06Eh Preset Value
-	0E0h Shared Bus Control (Low)
-	0E2h Shared Bus Control (High)
-	0FCh Slot Interrupt Status
-	0FEh Host Controller Version
+	000h 	SDMA System Address (Low)
+		  	Argument 2 (Low)
+	002h 	SDMA System Address (High)
+		  	Argument 2 (High)
+	004h 	Block Size
+	006h 	Block Count
+	008h 	Argument 1 (Low)
+	00Ah 	Argument 1 (High)
+	00Ch 	Transfer Mode
+	00Eh 	Command
+	010h 	Response0
+	012h 	Response1
+	014h 	Response2
+	016h 	Response3
+	018h 	Response4
+	01Ah 	Response5
+	01Ch 	Response6
+	01Eh 	Response7
+	020h 	Buffer Data Port0
+	022h 	Buffer Data Port1
+	024h 	Present State
+	026h 	Present State
+	028h 	Power Control Host Control 1
+	02Ah 	Wakeup Control Block Gap Control
+	02Ch 	Clock Control
+	02Eh 	Software Reset Timeout Control
+	030h 	Normal Interrupt Status
+	032h 	Error Interrupt Status
+	034h 	Normal Interrupt Status Enable
+	036h 	Error Interrupt Status Enable
+	038h 	Normal Interrupt Signal Enable
+	03Ah 	Error Interrupt Signal Enable
+	03Ch 	Auto CMD Error Status
+	03Eh 	Host Control 2
+	040h 	Capabilities
+	042h 	Capabilities
+	044h 	Capabilities
+	046h 	Capabilities
+	048h 	Maximum Current Capabilities
+	04Ah 	Maximum Current Capabilities
+	04Ch 	Maximum Current Capabilities (Reserved)
+	04Eh 	Maximum Current Capabilities (Reserved)
+	050h 	Force Event for Auto CMD Error Status
+	052h 	Force Event for Error Interrupt Status
+	054h 	--- ADMA Error Status
+	058h 	ADMA System Address [15:00]
+	05Ah 	ADMA System Address [31:16]
+	05Ch 	ADMA System Address [47:32]
+	05Eh 	ADMA System Address [63:48]
+	060h 	Preset Value
+	062h 	Preset Value
+	064h 	Preset Value
+	066h 	Preset Value
+	068h 	Preset Value
+	06Ah 	Preset Value
+	06Ch 	Preset Value
+	06Eh 	Preset Value
+	0E0h 	Shared Bus Control (Low)
+	0E2h 	Shared Bus Control (High)
+	0FCh 	Slot Interrupt Status
+	0FEh 	Host Controller Version
 	-----------------------------------------------------------------------*/
 
 	// 2.2.1 SDMA System Address / Argument 2 Register (Offset 000h)
@@ -230,7 +230,7 @@ module sd_host_controller(
 	reg 	[127:0]	reg_selected;
 	reg 	[63:0]	reg2_selected;
 	reg	[31:0] 	present_state_z1;						
-	reg   [15:0]   normal_int_status_z1;   // delay
+	reg 	[15:0]	normal_int_status_z1; 	// delay
 	reg				wr_reg_strb_z1;			// strobe to write data, delay
 	reg				wr_reg_strb_z2;			// strobe to write data, delay										  
 	// This will start the ADMA2 base on the card status response packet.
@@ -239,24 +239,24 @@ module sd_host_controller(
 	reg				strt_dat_tf; 
 	reg				sd_clk_stab_reg;
 	reg				sd_clk_stab_reg_z1;
-	reg				resp_recvd; 		// response received flag	
-	reg				cmd_indx_err;		// command index error	 	
-	reg				cmd_crc_err;		// command crc error
+	reg				resp_recvd; 				// response received flag	
+	reg				cmd_indx_err;				// command index error	 	
+	reg				cmd_crc_err;				// command crc error
 	reg				new_resp_pkt_strb_z1;	// careful, based on sdc_clk
 	reg				new_resp_pkt_strb_z2;	// careful, based on sdc_clk
 	reg 				new_resp_2_pkt_strb_z1;	// careful, based on sdc_clk						
 	reg				end_bit_det_strb_z1;		// careful, based on sdc_clk
-	reg				post_r1_pkt_strb;	// create a post resp strobe
-	reg				post_r2_pkt_strb;	// create a post resp2 strobe
-	reg				r2_resp_enb;		// Determine if it's a R2 response.		
-	reg	[15:0]	rca;					// RCA after reception of CMD3.		
-	reg				wr_busy_z1; 		// indicates that the sd card is busy, delay
-   reg            des_fifo_rd_strb_z1; // delay
-   reg            des_fifo_rd_strb_z2; // delay
-	reg            des_fifo_rd_strb_z3; // delay
-	reg            des_fifo_rd_strb_z4; // delay
-	reg            des_fifo_rd_strb_z5; // delay
-	reg            des_fifo_rd_strb_z6; // delay
+	reg				post_r1_pkt_strb;			// create a post resp strobe
+	reg				post_r2_pkt_strb;			// create a post resp2 strobe
+	reg				r2_resp_enb;				// Determine if it's a R2 response.		
+	reg	[15:0]	rca;							// RCA after reception of CMD3.		
+	reg				wr_busy_z1; 				// indicates that the sd card is busy, delay
+  	reg         	des_fifo_rd_strb_z1; 	// delay
+  	reg         	des_fifo_rd_strb_z2; 	// delay
+	reg         	des_fifo_rd_strb_z3; 	// delay
+	reg         	des_fifo_rd_strb_z4; 	// delay
+	reg         	des_fifo_rd_strb_z5; 	// delay
+	reg         	des_fifo_rd_strb_z6; 	// delay
 	// Reached the last descriptor table, 
 	// attr_end_descr = 1.  We are done with all data blocks.
 	// If the Auto CMD12 is set in the transfer mode register,
@@ -264,33 +264,33 @@ module sd_host_controller(
 	// to stop the transfer.  This is done after the last block
 	// has been sent/receive to/from the SD card.
 	reg				end_descr;
-   reg            dat_tf_done_z1;      // delay
+  	reg         	dat_tf_done_z1;      	// delay
 	
 	// Wires	  
 	wire				new_cmd_strb; 
 	wire	[47:0]	cmd_packet;		 
 	wire				inserted_card_strb;
-	wire				new_resp_pkt_strb;	// careful, based on sdc_clk
-	wire 				new_resp_2_pkt_strb;	// careful, based on sdc_clk
+	wire				new_resp_pkt_strb;				// careful, based on sdc_clk
+	wire 				new_resp_2_pkt_strb;				// careful, based on sdc_clk
 	wire 	[47:0] 	response_packet;
 	wire 	[135:0] 	r2_packet;
 	wire	[6:0]		resp2_crc7_out;
-	wire				adma_sar_inc_strb; 	      // increments adma sys. addr. reg.	
-   wire           adma2_rdy_to_snd_dat_strb; // send first word of each block
+	wire				adma_sar_inc_strb; 	  			// increments adma sys. addr. reg.	
+  	wire          	adma2_rdy_to_snd_dat_strb; 	// send first word of each block
 						// careful, based on sdc_clk
-	wire				end_bit_det_strb;		      // end bit of write command detected
-	wire				wr_busy; 				      // indicates that the sd card is busy
+	wire				end_bit_det_strb;		      	// end bit of write command detected
+	wire				wr_busy; 				      	// indicates that the sd card is busy
 	wire				new_dat_set_strb;       
 	wire 	[71:0]	tf_data;					   	  								 	 	
-	wire				dat_tf_done;			      // Finished with data transfer.
+	wire				dat_tf_done;			      	// Finished with data transfer.
 	wire				sd_clk_stable;
-	wire				sdc_clk; 				   // internally generated sd clock.
+	wire				sdc_clk; 				   		// internally generated sd clock.
 	wire	[15:0]	dat_crc16_out;          
-	wire				fin_64sdclks_strb; 	   // for Command Timeout Error	
-	wire				fin_strtchStrb40h; 	   // finish the snd_cmd_strb latch
-	wire				fin_strtchStrb10h; 	   // finish the snd_cmd_strb latch	
-   wire 	[4095:0] rd0_pkt;						// read packet from sd card, single line 
-	wire				new_rd0_pkt_strb;		   // rd0 pkt ready.
+	wire				fin_64sdclks_strb; 	   		// for Command Timeout Error	
+	wire				fin_strtchStrb40h; 	   		// finish the snd_cmd_strb latch
+	wire				fin_strtchStrb10h; 	   		// finish the snd_cmd_strb latch	
+  	wire 	[4095:0] rd0_pkt;								// read packet from sd card, single line 
+	wire				new_rd0_pkt_strb;		   		// rd0 pkt ready.
 	
 	// Initialize sequential logic
 	// Need to put the registers in here too.
@@ -416,7 +416,7 @@ module sd_host_controller(
 	
 	// Select which map register to send away to the bus host driver.	
 	// This process is not polled.  It only happens when one of the
-	// sensitivity items changes.
+	// sensitivity items changes.  Combinational circuit.
 	always@(rd_reg_index, block_size, block_count, argument_1, 
 				transfer_mode, command, response, present_state, clock_cntrl,
 				normal_int_status, error_int_status, capabilities, 
@@ -425,19 +425,19 @@ module sd_host_controller(
 		case (rd_reg_index[11:0])
 			// Need to fill in the packet according to the register size of
 			// each map register because reg_selected has 128 bits.  Some
-			// responses has 128 bits.							
+			// responses have 128 bits.							
 			12'h004	:	reg_selected <= {{112{1'b0}}, block_size};
 			12'h006	:	reg_selected <= {{112{1'b0}}, block_count};
-			12'h008	:	reg_selected <= {{96{1'b0}}, argument_1};	
+			12'h008	:	reg_selected <= {{96{1'b0}}, 	argument_1};	
 			12'h00C	:	reg_selected <= {{112{1'b0}}, transfer_mode};
 			12'h00E	:	reg_selected <= {{112{1'b0}}, command};
 			12'h010	:	reg_selected <= response;
-			12'h024	:	reg_selected <= {{96{1'b0}}, present_state};
+			12'h024	:	reg_selected <= {{96{1'b0}}, 	present_state};
 			12'h02C	:	reg_selected <= {{116{1'b0}}, clock_cntrl};
 			12'h030	:	reg_selected <= {{116{1'b0}}, normal_int_status};
 			12'h032	:	reg_selected <= {{116{1'b0}}, error_int_status};
-			12'h040	:	reg_selected <= {{64{1'b0}}, capabilities};
-			12'h058	:	reg_selected <= adma_system_addr;
+			12'h040	:	reg_selected <= {{64{1'b0}}, 	capabilities};
+			12'h058	:	reg_selected <= 					adma_system_addr;
 			// Followings are not part of host controller register map.
 			12'h0FF	:	reg_selected <= {{112{1'b0}}, dat0_crc};
 			default 	: 	reg_selected <= {128{1'b0}};
@@ -449,7 +449,6 @@ module sd_host_controller(
 	begin
 		if (reset)
 			rd_reg_output <= {128{1'b0}};
-		//else if (rd_strb)
 		else
 			rd_reg_output <= reg_selected;      
 	end										 
