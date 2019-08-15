@@ -531,7 +531,7 @@ module sd_host_controller(
 	begin
 		if (reset) 													 
 			present_state		<= {32{1'b0}};													
-		// The Command Inhibit (CMD) bit.
+		// The Command Inhibit (CMD) bit.  Bit 0.
 		// triggers by the send command		
 		// This bit is set immediately after the Command register (00Eh)
 		// is written.  This bit is cleared when the command response 
@@ -541,7 +541,7 @@ module sd_host_controller(
 		// for command 0.
 		else if (wr_reg_index == 12'h00E && wr_reg_strb_z1 && (command[13:8] > 6'h00))
 			present_state		<= present_state | 32'h0000_0001;
-		// clears command inhibit (CMD) bit.
+		// clears command inhibit (CMD) bit.  Bit 0.
 		// This bit is cleared when the command response is received.
 		// For both kinds of responses?
 		// new_resp_pkt_strb cannot be used for cmd12 and 23.
@@ -553,19 +553,26 @@ module sd_host_controller(
 		else if ((!new_resp_pkt_strb && new_resp_pkt_strb_z1) ||
 					(!new_resp_2_pkt_strb && new_resp_2_pkt_strb_z1 || software_reset[1])) 
 			present_state 		<= present_state & 32'hFFFF_FFFE;
-		// Command Inhibit (DAT) bit.
-		// need to take care of these two conditions
-		//else if (present_state[2] || present_state[9]) 
-//			present_state	 	<= present_state | 32'h0000_0002;
-//		// to clear this bit.
-//		else if (!present_state[2] || !present_state[9]) begin 
-//			present_state 		<= present_state & 32'hFFFF_FFFD;
-//		end
-		// end bit of write command detected
+		// Command Inhibit (DAT) bit.  Bit 1.
+		// need to take care of these two conditions.
+		// This status bit is generated if either the DAT Line Active or
+		// the Read Transfer Active is set to 1.  If this bit is 0, it indicates
+		// the Host Controller can issue the next SD command.  Changing from
+		// 1 to 0 generates a Transfer Complete interrupt in the Normal
+		// Interrupt Sttus register.
+		else if (present_state[2] || present_state[9]) 
+			present_state	 	<= present_state | 32'h0000_0002;
+		// to clear this bit.
+		else if (!present_state[2] || !present_state[9])  
+			present_state 		<= present_state & 32'hFFFF_FFFD;
+
+		// DAT Line Active.  Bit 2.
 		// This bit could also be set when we are reading data.
 		// This bit is set after the end bit of the write command. 
 		// But the command has to be the send data command (24d, 18h) or (25d, 19h).
-		// Update present_state[1], Command Inhibit (DAT).
+		// 18h is block write, 19h is multiple blocks write.
+		// 			Rising Edge 												and read
+		// 			block  or read multiple blocks.
 		else if ((end_bit_det_strb && (!end_bit_det_strb_z1)) && ((command[13:8] == 6'h18) || (command[13:8] == 6'h19)))	// rising edge 
 			present_state	 	<= present_state | 32'h0000_0004;
 		// Clear it when DAT0 is not busy any more and we have reached the last 
